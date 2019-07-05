@@ -1,20 +1,18 @@
 defmodule WordCheck do
   use GenServer
 
-  require Logger
-
   # Client API
   def start_link() do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+    GenServer.start_link(__MODULE__, :ok)
   end
 
   # Receive a word
-  def check_word(word) do
-    GenServer.cast(__MODULE__, {:check_word, word})
+  def check_word(pid, word) do
+    GenServer.cast(pid, {:check_word, word})
   end
 
-  def get_larger_word() do
-    GenServer.call(__MODULE__, :get_larger_word)
+  def get_larger_word(pid) do
+    GenServer.call(pid, :get_larger_word)
   end
 
   # Server callbacks
@@ -24,8 +22,6 @@ defmodule WordCheck do
   end
 
   def handle_cast({:check_word, word}, state = %{syllables: syllables, larger_word: larger_word}) do
-    word |> inspect |> Logger.debug()
-
     with true <- length(word) > length(larger_word),
          true <- are_syllables?(word, syllables) do
       new_state = Map.put(state, :larger_word, word)
