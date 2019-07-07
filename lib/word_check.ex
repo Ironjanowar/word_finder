@@ -2,8 +2,8 @@ defmodule WordCheck do
   use GenServer
 
   # Client API
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok)
+  def start_link(syllables) do
+    GenServer.start_link(__MODULE__, {:ok, syllables})
   end
 
   # Receive a word
@@ -16,15 +16,16 @@ defmodule WordCheck do
   end
 
   # Server callbacks
-  def init(:ok) do
-    syllables = File.read!("syllables.txt") |> String.split("\n", trim: true)
-    {:ok, %{syllables: syllables, larger_word: []}}
+  def init({:ok, syllables}) do
+    {:ok, %{syllables: syllables, larger_word: [], length: 0}}
   end
 
-  def handle_cast({:check_word, word}, state = %{syllables: syllables, larger_word: larger_word}) do
-    with true <- length(word) > length(larger_word),
+  def handle_cast({:check_word, word}, state = %{syllables: syllables, length: old_length}) do
+    new_length = length(word)
+
+    with true <- new_length > old_length,
          true <- are_syllables?(word, syllables) do
-      new_state = Map.put(state, :larger_word, word)
+      new_state = state |> Map.put(:larger_word, word) |> Map.put(:length, new_length)
       {:noreply, new_state}
     else
       _ -> {:noreply, state}
@@ -39,6 +40,6 @@ defmodule WordCheck do
   # Utils
   def are_syllables?(word, syllables) do
     # Check if all syllables of the word are in syllables.txt
-    false not in Enum.map(word, fn syllable -> syllable in syllables end)
+    Enum.all?(word, &MapSet.member?(syllables, &1))
   end
 end
